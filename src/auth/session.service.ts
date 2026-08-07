@@ -1,0 +1,121 @@
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { FieldValue } from 'firebase-admin/firestore';
+import { EnvironmentConfig } from '../config/environment.config';
+import { FirebaseAdminService } from './firebase-admin.service';
+import { normalizedClaims, Role, roleFromClaims } from './role.enum';
+
+@Injectable()
+export class SessionService {
+  constructor(
+    private readonly firebase: FirebaseAdminService,
+    private readonly config: EnvironmentConfig,
+  ) {}
+
+  async create(
+    idToken: string,
+    marketingOptIn?: boolean,
+  ): Promise<SessionResult> {
+    const token = await this.firebase.auth.verifyIdToken(idToken, true);
+    if (Date.now() / 1000 - token.auth_time > 5 * 60) {
+      throw new UnauthorizedException('Recent sign-in is required.');
+    }
+    const user = await this.firebase.auth.getUser(token.uid);
+    const role = await this.ensureRole(user.uid, user.customClaims ?? {});
+    await this.ensureProfile({
+      uid: user.uid,
+      email: user.email ?? token.email ?? null,
+      displayName: user.displayName ?? null,
+      role,
+      marketingOptIn,
+    });
+    const sessionCookie = await this.firebase.auth.createSessionCookie(
+      idToken,
+      {
+        expiresIn: this.config.sessionTtlMilliseconds,
+      },
+    );
+    return {
+      sessionCookie,
+      user: {
+        uid: user.uid,
+        email: user.email ?? token.email ?? null,
+        emailVerified: user.emailVerified,
+        role,
+      },
+    };
+  }
+
+  private async ensureRole(
+    uid: string,
+    claims: Record<string, unknown>,
+  ): Promise<Role> {
+    const role = roleFromClaims(claims);
+    if (!role && ('role' in claims || 'roles' in claims)) {
+      throw new ForbiddenException('The account has invalid role claims.');
+    }
+    const resolved = role ?? Role.USER;
+    if (claims.role !== resolved || 'roles' in claims) {
+      await this.firebase.auth.setCustomUserClaims(
+        uid,
+        normalizedClaims(claims, resolved),
+      );
+    }
+    return resolved;
+  }
+
+  private async ensureProfile(profile: ProfileInput): Promise<void> {
+    const profileRef = this.firebase.firestore
+      .collection('users')
+      .doc(profile.uid);
+    const values = {
+      uid: profile.uid,
+      email: profile.email,
+      displayName: profile.displayName,
+      role: profile.role,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(profile.marketingOptIn === undefined
+        ? {}
+        : {
+            marketingOptIn: profile.marketingOptIn,
+            marketingConsentUpdatedAt: FieldValue.serverTimestamp(),
+          }),
+    };
+    await this.firebase.firestore.runTransaction(async (transaction) => {
+      const existing = await transaction.get(profileRef);
+      if (existing.exists) {
+        transaction.set(
+          profileRef,
+          { ...values, roles: FieldValue.delete() },
+          { merge: true },
+        );
+        return;
+      }
+      transaction.create(profileRef, {
+        ...values,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+  }
+}
+
+interface ProfileInput {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role: Role;
+  marketingOptIn?: boolean;
+}
+
+export interface SessionResult {
+  sessionCookie: string;
+  user: {
+    uid: string;
+    email: string | null;
+    emailVerified: boolean;
+    role: Role;
+  };
+}
