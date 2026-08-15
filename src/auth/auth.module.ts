@@ -18,6 +18,6 @@ import { RoleAdminService } from './role-admin.service';
     AdminGuard,
     RoleAdminService,
   ],
-  exports: [FirebaseAdminService, SessionAuthGuard, AdminGuard],
+  exports: [FirebaseAdminService, SessionAuthGuard, AdminGuard, CsrfGuard],
 })
 export class AuthModule {}

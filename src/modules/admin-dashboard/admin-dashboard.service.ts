@@ -30,7 +30,7 @@ export class AdminDashboardService {
       this.repository.period(windows.previousStart, windows.currentStart),
       this.repository.count('orders', 'paymentStatus', 'failed'),
       this.repository.count('products', 'lowStock', true),
-      this.repository.count('orders', 'fulfillmentStatus', 'ready_to_ship'),
+      this.repository.count('orders', 'fulfillmentStatus', 'processing'),
       this.repository.weeklyPaidOrders(windows.trendStart, windows.currentEnd),
       this.repository.recentOrders(5),
       Promise.resolve({ email: user.email, displayName: user.displayName }),

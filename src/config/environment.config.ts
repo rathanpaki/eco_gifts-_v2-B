@@ -11,8 +11,11 @@ export class EnvironmentConfig {
   readonly frontendOrigins = this.origins();
   readonly sessionCookieName = this.value('SESSION_COOKIE_NAME', 'session');
   readonly csrfCookieName = this.value('CSRF_COOKIE_NAME', 'csrf');
+  readonly cartCookieName = this.value('CART_COOKIE_NAME', 'eco_cart');
   readonly sessionTtlMilliseconds =
     this.integer('SESSION_DURATION_DAYS', 5, 1, 14) * 86_400_000;
+  readonly cartTtlMilliseconds =
+    this.integer('CART_DURATION_DAYS', 30, 1, 90) * 86_400_000;
   readonly cookieSecure = this.boolean('COOKIE_SECURE', this.isProduction);
   readonly cookieSameSite = this.sameSite();
   readonly cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
@@ -76,6 +79,17 @@ export class EnvironmentConfig {
       domain: this.cookieDomain,
       path: '/',
       maxAge: this.sessionTtlMilliseconds,
+    };
+  }
+
+  cartCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.cookieSecure,
+      sameSite: this.cookieSameSite,
+      domain: this.cookieDomain,
+      path: '/',
+      maxAge: this.cartTtlMilliseconds,
     };
   }
 

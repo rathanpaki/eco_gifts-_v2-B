@@ -7,6 +7,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { EnvironmentConfig } from '../config/environment.config';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { normalizedClaims, Role, roleFromClaims } from './role.enum';
+import { customerSearchTerms } from './user-profile.values';
 
 @Injectable()
 export class SessionService {
@@ -29,6 +30,7 @@ export class SessionService {
       uid: user.uid,
       email: user.email ?? token.email ?? null,
       displayName: user.displayName ?? null,
+      emailVerified: user.emailVerified,
       role,
       marketingOptIn,
     });
@@ -76,6 +78,8 @@ export class SessionService {
       email: profile.email,
       displayName: profile.displayName,
       role: profile.role,
+      emailVerified: profile.emailVerified,
+      searchTerms: customerSearchTerms(profile.displayName, profile.email),
       updatedAt: FieldValue.serverTimestamp(),
       ...(profile.marketingOptIn === undefined
         ? {}
@@ -96,6 +100,16 @@ export class SessionService {
       }
       transaction.create(profileRef, {
         ...values,
+        orderCount: 0,
+        completedOrderCount: 0,
+        lifetimeValueCents: 0,
+        impactPlasticAvoidedGrams: 0,
+        impactCo2SavedKg: 0,
+        rewardPoints: 0,
+        hasOrders: false,
+        repeatCustomer: false,
+        customerSegment: 'none',
+        marketingOptIn: profile.marketingOptIn ?? false,
         createdAt: FieldValue.serverTimestamp(),
       });
     });
@@ -106,6 +120,7 @@ interface ProfileInput {
   uid: string;
   email: string | null;
   displayName: string | null;
+  emailVerified: boolean;
   role: Role;
   marketingOptIn?: boolean;
 }
