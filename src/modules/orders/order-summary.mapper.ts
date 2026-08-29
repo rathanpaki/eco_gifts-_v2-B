@@ -16,6 +16,8 @@ export function mapOrderSummary(id: string, data: DocumentData): OrderSummary {
     currency: order.currency,
     paymentStatus: order.paymentStatus,
     fulfillmentStatus: order.fulfillmentStatus,
+    deliveryConfirmationStatus: order.deliveryConfirmationStatus,
+    deliveryConfirmedAt: order.deliveryConfirmedAt,
     estimatedDelivery: order.delivery.estimatedDays,
     impact: order.impact,
     createdAt: order.createdAt,

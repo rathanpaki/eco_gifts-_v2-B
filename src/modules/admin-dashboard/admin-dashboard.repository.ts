@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  AggregateField,
   Timestamp,
   type DocumentData,
   type Query,
@@ -13,22 +12,17 @@ export class AdminDashboardRepository {
   constructor(private readonly firebase: FirebaseAdminService) {}
 
   async period(start: Date, end: Date): Promise<PeriodSummary> {
-    const orders = this.range('orders', start, end);
-    const paid = orders.where('paymentStatus', '==', 'paid');
-    const [countResult, paidResult] = await Promise.all([
-      orders.count().get(),
-      paid
-        .aggregate({
-          count: AggregateField.count(),
-          revenueCents: AggregateField.sum('totalCents'),
-        })
-        .get(),
-    ]);
-    const paidData = paidResult.data();
+    const snapshot = await this.range('orders', start, end).get();
+    const paid = snapshot.docs.filter(
+      (document) => document.get('paymentStatus') === 'paid',
+    );
     return {
-      orderCount: count(countResult.data().count),
-      paidOrderCount: count(paidData.count),
-      revenueCents: cents(paidData.revenueCents),
+      orderCount: snapshot.size,
+      paidOrderCount: paid.length,
+      revenueCents: paid.reduce(
+        (total, document) => total + cents(document.get('totalCents')),
+        0,
+      ),
     };
   }
 
@@ -46,13 +40,10 @@ export class AdminDashboardRepository {
   }
 
   async weeklyPaidOrders(start: Date, end: Date): Promise<DocumentData[]> {
-    const snapshot = await this.firebase.firestore
-      .collection('orders')
-      .where('paymentStatus', '==', 'paid')
-      .where('createdAt', '>=', Timestamp.fromDate(start))
-      .where('createdAt', '<', Timestamp.fromDate(end))
-      .get();
-    return snapshot.docs.map((document) => document.data());
+    const snapshot = await this.range('orders', start, end).get();
+    return snapshot.docs
+      .filter((document) => document.get('paymentStatus') === 'paid')
+      .map((document) => document.data());
   }
 
   async recentOrders(limit: number) {
@@ -83,9 +74,7 @@ function count(value: unknown): number {
 }
 
 function cents(value: unknown): number {
-  if (value === undefined || value === null) return 0;
-  if (!Number.isSafeInteger(value) || (value as number) < 0) {
-    throw new Error('Firestore returned an invalid revenue total.');
-  }
-  return value as number;
+  return Number.isSafeInteger(value) && (value as number) >= 0
+    ? (value as number)
+    : 0;
 }

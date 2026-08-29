@@ -11,6 +11,9 @@ export interface UploadedProductImage {
   size: number;
 }
 
+export const PRODUCT_IMAGE_MAX_MB = 12;
+export const PRODUCT_IMAGE_MAX_BYTES = PRODUCT_IMAGE_MAX_MB * 1024 * 1024;
+
 @Injectable()
 export class ProductImageService {
   constructor(private readonly firebase: FirebaseAdminService) {}
@@ -55,8 +58,10 @@ export class ProductImageService {
     file: UploadedProductImage | undefined,
   ): asserts file is UploadedProductImage {
     if (!file) throw new BadRequestException('An image file is required.');
-    if (file.size < 1 || file.size > 5 * 1024 * 1024) {
-      throw new BadRequestException('Images must be no larger than 5 MB.');
+    if (file.size < 1 || file.size > PRODUCT_IMAGE_MAX_BYTES) {
+      throw new BadRequestException(
+        `Images must be no larger than ${PRODUCT_IMAGE_MAX_MB} MB.`,
+      );
     }
     if (!extensions[file.mimetype] || !imageSignatureAllowed(file.buffer)) {
       throw new BadRequestException('Upload a JPEG, PNG, or WebP image.');

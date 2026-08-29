@@ -10,6 +10,7 @@ export function productValues(input: ProductWriteInput) {
     shortDescription: input.shortDescription.trim(),
     description: input.description.trim(),
     category: input.category.trim(),
+    occasions: [...new Set(input.occasions)],
     sku: input.sku.trim().toUpperCase(),
     currency: input.currency.toUpperCase(),
     lowStock: input.stockQuantity <= input.lowStockThreshold,

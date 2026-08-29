@@ -17,7 +17,7 @@ export function productSlug(name: string): string {
 export function searchTerms(input: ProductWriteInput): string[] {
   return Array.from(
     new Set(
-      `${input.name} ${input.sku} ${input.category}`
+      `${input.name} ${input.sku} ${input.category} ${input.occasions.join(' ')}`
         .toLowerCase()
         .split(/[^a-z0-9]+/)
         .filter((value) => value.length > 1),

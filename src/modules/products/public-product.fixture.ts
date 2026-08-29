@@ -9,6 +9,7 @@ export function publicProductFixture(
     shortDescription: 'A clean-burning soy candle.',
     description: 'Hand-poured using responsibly sourced soy wax.',
     category: 'Home',
+    occasions: ['wedding', 'birthday'],
     priceCents: 3400,
     currency: 'USD',
     stockQuantity: 6,

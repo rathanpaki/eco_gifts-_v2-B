@@ -8,6 +8,8 @@ describe('public products query DTO', () => {
       minPriceCents: '1000',
       maxPriceCents: '5000',
       personalizable: 'true',
+      occasion: 'wedding',
+      page: '3',
       limit: '12',
     });
     expect(await validate(query)).toHaveLength(0);
@@ -15,6 +17,8 @@ describe('public products query DTO', () => {
       minPriceCents: 1000,
       maxPriceCents: 5000,
       personalizable: true,
+      occasion: 'wedding',
+      page: 3,
       limit: 12,
     });
   });
@@ -24,8 +28,9 @@ describe('public products query DTO', () => {
       minPriceCents: '-2',
       personalizable: 'yes',
       sort: 'popular',
+      page: '0',
       limit: '2.5',
     });
-    expect(await validate(query)).toHaveLength(4);
+    expect(await validate(query)).toHaveLength(5);
   });
 });

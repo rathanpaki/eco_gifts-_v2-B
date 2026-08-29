@@ -1,4 +1,5 @@
 import type { DocumentData } from 'firebase-admin/firestore';
+import type { ProductOccasion } from './product-occasion';
 
 export type PublicProductSort =
   'featured' | 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
@@ -22,6 +23,7 @@ export interface PublicProduct {
   shortDescription: string;
   description: string;
   category: string;
+  occasions: ProductOccasion[];
   priceCents: number;
   currency: string;
   stockQuantity: number;
@@ -39,6 +41,10 @@ export interface PublicProduct {
 export interface PublicProductPage {
   items: PublicProduct[];
   nextCursor: string | null;
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface PublicProductDocument {
@@ -49,15 +55,21 @@ export interface PublicProductDocument {
 export interface PublicProductDocumentPage {
   docs: PublicProductDocument[];
   nextCursor: string | null;
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface PublicProductListInput {
   searchTokens: string[];
   category?: string;
+  occasion?: ProductOccasion;
   minPriceCents?: number;
   maxPriceCents?: number;
   personalizable?: boolean;
   sort: PublicProductSort;
   cursor?: string;
+  page: number;
   limit: number;
 }

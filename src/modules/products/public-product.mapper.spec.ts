@@ -30,10 +30,15 @@ describe('public product mapper', () => {
     expect(product.lowStock).toBe(true);
   });
 
-  it('rejects malformed published product records', () => {
-    expect(() =>
-      mapPublicProduct('product-1', publicProductFixture({ images: [] })),
-    ).toThrow(InternalServerErrorException);
+  it('keeps the catalog available when a legacy product has no images', () => {
+    const product = mapPublicProduct(
+      'product-1',
+      publicProductFixture({ images: [] }),
+    );
+    expect(product.images).toEqual([]);
+  });
+
+  it('rejects malformed numeric product data', () => {
     expect(() =>
       mapPublicProduct('product-1', publicProductFixture({ priceCents: -1 })),
     ).toThrow(InternalServerErrorException);

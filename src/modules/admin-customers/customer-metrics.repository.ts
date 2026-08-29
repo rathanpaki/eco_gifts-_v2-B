@@ -9,33 +9,42 @@ export class CustomerMetricsRepository {
   constructor(private readonly firebase: FirebaseAdminService) {}
 
   async get(now = new Date()) {
-    const users = this.firebase.firestore
-      .collection('users')
-      .where('role', '==', Role.USER);
+    const allUsers = this.firebase.firestore.collection('users');
+    const users = allUsers.where('role', '==', Role.USER);
     const window = customerMetricWindow(now);
-    const [total, current, previous, buyers, repeat, consent, values] =
-      await Promise.all([
-        users.count().get(),
-        users
-          .where('createdAt', '>=', Timestamp.fromDate(window.currentStart))
-          .count()
-          .get(),
-        users
-          .where('createdAt', '>=', Timestamp.fromDate(window.previousStart))
-          .where('createdAt', '<', Timestamp.fromDate(window.currentStart))
-          .count()
-          .get(),
-        users.where('hasOrders', '==', true).count().get(),
-        users.where('repeatCustomer', '==', true).count().get(),
-        users.where('marketingOptIn', '==', true).count().get(),
-        users
-          .aggregate({
-            lifetimeValueCents: AggregateField.sum('lifetimeValueCents'),
-            completedOrders: AggregateField.sum('completedOrderCount'),
-          })
-          .get(),
-      ]);
-    const aggregate = values.data();
+    const [
+      total,
+      current,
+      previous,
+      buyers,
+      repeat,
+      consent,
+      lifetime,
+      completed,
+    ] = await Promise.all([
+      users.count().get(),
+      users
+        .where('createdAt', '>=', Timestamp.fromDate(window.currentStart))
+        .orderBy('createdAt', 'desc')
+        .count()
+        .get(),
+      users
+        .where('createdAt', '>=', Timestamp.fromDate(window.previousStart))
+        .where('createdAt', '<', Timestamp.fromDate(window.currentStart))
+        .orderBy('createdAt', 'desc')
+        .count()
+        .get(),
+      users.where('hasOrders', '==', true).count().get(),
+      users.where('repeatCustomer', '==', true).count().get(),
+      users.where('marketingOptIn', '==', true).count().get(),
+      allUsers
+        .aggregate({ value: AggregateField.sum('lifetimeValueCents') })
+        .get(),
+      allUsers
+        .aggregate({ value: AggregateField.sum('completedOrderCount') })
+        .get(),
+    ]);
+
     return customerMetrics({
       total: total.data().count,
       currentMonth: current.data().count,
@@ -43,8 +52,8 @@ export class CustomerMetricsRepository {
       buyers: buyers.data().count,
       repeatBuyers: repeat.data().count,
       optedIn: consent.data().count,
-      lifetimeValueCents: safeAggregate(aggregate.lifetimeValueCents),
-      completedOrders: safeAggregate(aggregate.completedOrders),
+      lifetimeValueCents: safeAggregate(lifetime.data().value),
+      completedOrders: safeAggregate(completed.data().value),
     });
   }
 }

@@ -24,12 +24,17 @@ export class AdminProductsRepository {
     }
     const search = searchToken(input.search);
     if (search) query = query.where('searchTerms', 'array-contains', search);
+    const totalItems = (await query.count().get()).data().count;
+    const totalPages = Math.ceil(totalItems / input.limit);
+    const page = totalPages ? Math.min(input.page, totalPages) : 1;
     query = query
       .orderBy('updatedAt', 'desc')
       .orderBy(FieldPath.documentId(), 'desc');
     if (input.cursor) {
       const cursor = decodeCursor(input.cursor);
       query = query.startAfter(Timestamp.fromMillis(cursor.time), cursor.id);
+    } else if (page > 1) {
+      query = query.offset((page - 1) * input.limit);
     }
     const snapshot = await query.limit(input.limit + 1).get();
     const hasMore = snapshot.docs.length > input.limit;
@@ -38,6 +43,10 @@ export class AdminProductsRepository {
     return {
       docs: docs.map((doc) => ({ id: doc.id, data: doc.data() })),
       nextCursor: hasMore && last ? encodeCursor(last.id, last.data()) : null,
+      page,
+      pageSize: input.limit,
+      totalItems,
+      totalPages,
     };
   }
 
@@ -55,6 +64,13 @@ export class AdminProductsRepository {
       lowStock: lowStock.data().count,
       missingEcoEvidence: missing.data().count,
     };
+  }
+
+  categories() {
+    return this.firebase.firestore
+      .collection('products')
+      .select('category')
+      .get();
   }
 
   async get(id: string) {
@@ -109,6 +125,7 @@ interface ListQuery {
   filter: ProductFilter;
   search?: string;
   cursor?: string;
+  page: number;
   limit: number;
 }
 

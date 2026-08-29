@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { AuthenticatedUser } from '../../auth/auth.types';
 import { mapOrder } from './order.mapper';
 import { mapOrderEvent } from './order-event.mapper';
 import { mapOrderSummary } from './order-summary.mapper';
@@ -27,6 +28,14 @@ export class OrdersService {
         };
       }),
     };
+  }
+
+  async confirmDelivery(
+    user: AuthenticatedUser,
+    orderId: string,
+  ): Promise<Order> {
+    await this.orders.confirmDelivery(orderId, user);
+    return this.get(user.uid, orderId);
   }
 
   async list(

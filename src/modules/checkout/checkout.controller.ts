@@ -26,11 +26,12 @@ export class CheckoutController {
 
   @Get('quote')
   quote(
+    @CurrentUser() user: AuthenticatedUser,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
     @Query() query: CheckoutSelectionDto,
   ): Promise<CheckoutQuote> {
-    return this.checkout.quote(request, response, query);
+    return this.checkout.quote(user, request, response, query);
   }
 
   @Post('orders')

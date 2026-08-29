@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../../auth/firebase-admin.service';
+import { Timestamp } from 'firebase-admin/firestore';
 import { calculateWeddingSeasonDemandSurge } from './inventory-calculator';
 import { mapStockAnalytics } from './inventory-analytics.mapper';
+import { aggregateInventorySales } from './inventory-sales.values';
 import type {
   CategorySurge,
   InventoryAnalyticsReport,
@@ -14,12 +16,24 @@ export class InventoryAnalyticsService {
   constructor(private readonly firebase: FirebaseAdminService) {}
 
   async getInventoryAnalytics(): Promise<InventoryAnalyticsReport> {
-    const snapshot = await this.firebase.firestore.collection('products').get();
-    const items = snapshot.docs.map((document) =>
-      mapStockAnalytics(document.id, document.data()),
+    const now = Timestamp.now();
+    const start = Timestamp.fromMillis(now.toMillis() - 60 * 86_400_000);
+    const [products, events] = await Promise.all([
+      this.firebase.firestore.collection('products').get(),
+      this.firebase.firestore
+        .collection('inventoryEvents')
+        .where('createdAt', '>=', start)
+        .get(),
+    ]);
+    const sales = aggregateInventorySales(
+      events.docs.map((document) => document.data()),
+      now.toDate(),
+    );
+    const items = products.docs.map((document) =>
+      mapStockAnalytics(document.id, document.data(), sales.get(document.id)),
     );
     return {
-      generatedAt: new Date().toISOString(),
+      generatedAt: now.toDate().toISOString(),
       totalProducts: items.length,
       criticalStockCount: items.filter(
         (item) => item.reorder.urgency === 'critical',

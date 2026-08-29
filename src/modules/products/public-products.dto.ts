@@ -12,6 +12,7 @@ import {
   MinLength,
 } from 'class-validator';
 import type { PublicProductSort } from './product.types';
+import { productOccasions, type ProductOccasion } from './product-occasion';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -43,6 +44,10 @@ export class PublicProductsQueryDto {
   category?: string;
 
   @IsOptional()
+  @IsIn(productOccasions)
+  occasion?: ProductOccasion;
+
+  @IsOptional()
   @Transform(integer)
   @IsInt()
   @Min(0)
@@ -70,6 +75,13 @@ export class PublicProductsQueryDto {
   @MaxLength(700)
   @Matches(/^[A-Za-z0-9_-]+$/)
   cursor?: string;
+
+  @IsOptional()
+  @Transform(integer)
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  page = 1;
 
   @IsOptional()
   @Transform(integer)

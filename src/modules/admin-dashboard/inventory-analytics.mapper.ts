@@ -6,17 +6,19 @@ import {
 } from './inventory-calculator';
 import type { StockAnalytics } from './inventory-analytics.types';
 
+import type { InventorySalesPeriods } from './inventory-sales.values';
 export function mapStockAnalytics(
   productId: string,
   data: DocumentData,
+  sales: InventorySalesPeriods = { current: 0, previous: 0 },
 ): StockAnalytics {
   const currentStock = integer(data.stockQuantity);
   const allocatedStock = integer(data.allocatedStock);
   const availableStock = Math.max(0, currentStock - allocatedStock);
   const salesVelocity = calculateSalesVelocity(
-    integer(data.unitsSold30d),
+    sales.current,
     30,
-    integer(data.prevUnitsSold30d),
+    sales.previous,
   );
   const leadTimeDays = positiveInteger(data.leadTimeDays, 7);
   const shelfLifeDays = optionalPositiveInteger(data.shelfLifeDays);

@@ -1,5 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
+import type { AdminPromotion } from '../admin-promotions/admin-promotion.types';
 import type { Cart } from '../cart/cart.types';
+import { contributionSummary } from '../eco-contribution/contribution.values';
+import type { RewardDiscount } from '../eco-contribution/contribution.types';
+import { checkoutPromotionDiscount } from './checkout-promotion.values';
+import {
+  configuredDeliveryOptions,
+  type CheckoutOperations,
+} from './checkout-operations.policy';
 import type {
   CheckoutImpact,
   CheckoutQuote,
@@ -37,16 +45,24 @@ const PACKAGING: PackagingOption[] = [
     ecoBonusPoints: 20,
   },
 ];
-
 const DELIVERY: DeliveryOption[] = [
   {
     id: 'standard',
-    name: 'Standard Shipping',
-    description: 'Tracked ground delivery',
+    name: 'Standard delivery',
+    description: 'Tracked delivery with the lowest transport impact',
     priceCents: 0,
     co2OffsetKg: 0,
     ecoBonusPoints: 0,
     estimatedDays: '3-5 business days',
+  },
+  {
+    id: 'express',
+    name: 'Express delivery',
+    description: 'Faster tracked delivery with higher transport impact',
+    priceCents: 1200,
+    co2OffsetKg: 0,
+    ecoBonusPoints: 0,
+    estimatedDays: '1-2 business days',
   },
   {
     id: 'green-logistics',
@@ -62,29 +78,65 @@ const DELIVERY: DeliveryOption[] = [
 export function buildCheckoutQuote(
   cart: Cart,
   selection: CheckoutSelection,
+  discount: RewardDiscount | null = null,
+  promotion: AdminPromotion | null = null,
+  operations?: CheckoutOperations,
 ): CheckoutQuote {
-  if (!cart.readyForCheckout || !cart.currency || !cart.items.length) {
+  if (!cart.readyForCheckout || !cart.currency || !cart.items.length)
     throw new BadRequestException('The cart is not ready for checkout.');
-  }
-  if (cart.currency !== 'USD') {
+  if (cart.currency !== 'USD')
     throw new BadRequestException('Checkout currently requires USD products.');
-  }
+  if (selection.voucherId && selection.promoCode)
+    throw new BadRequestException(
+      'Choose either a reward voucher or a promotion code.',
+    );
   const packaging = select(PACKAGING, selection.packagingId, 'recycled-box');
-  const delivery = select(DELIVERY, selection.deliveryId, 'standard');
+  const deliveryOptions = configuredDeliveryOptions(DELIVERY, operations);
+  const delivery = select(
+    deliveryOptions,
+    selection.deliveryId,
+    operations?.carbonNeutralDelivery ? 'green-logistics' : 'standard',
+  );
+  const ecoContribution = contributionSummary(
+    selection.contributionCause,
+    selection.contributionAmountCents,
+  );
+  const grossTotalCents =
+    cart.subtotalCents +
+    cart.personalizationCents +
+    packaging.priceCents +
+    delivery.priceCents +
+    (ecoContribution?.amountCents ?? 0);
+  const rewardDiscount = discount
+    ? {
+        ...discount,
+        amountCents: Math.min(discount.amountCents, grossTotalCents),
+      }
+    : null;
+  const promotionDiscount = checkoutPromotionDiscount(
+    cart,
+    delivery,
+    promotion,
+  );
+  const discountCents =
+    (rewardDiscount?.amountCents ?? 0) + (promotionDiscount?.amountCents ?? 0);
   return {
     items: cart.items,
     packagingOptions: PACKAGING.map((option) => ({ ...option })),
-    deliveryOptions: DELIVERY.map((option) => ({ ...option })),
+    deliveryOptions,
     packaging,
     delivery,
     subtotalCents: cart.subtotalCents,
-    totalCents: cart.subtotalCents + packaging.priceCents + delivery.priceCents,
+    personalizationCents: cart.personalizationCents,
+    totalCents: Math.max(0, grossTotalCents - discountCents),
     currency: cart.currency,
     impact: impact(cart, packaging, delivery),
+    ecoContribution,
+    rewardDiscount,
+    promotionDiscount,
     paymentMethod: 'pay_on_delivery',
   };
 }
-
 function impact(
   cart: Cart,
   packaging: PackagingOption,
@@ -101,11 +153,9 @@ function impact(
       productScore + packaging.ecoBonusPoints / 2 + delivery.ecoBonusPoints / 2,
     ),
   );
-  const grade =
-    score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 65 ? 'B' : 'C';
   return {
     score,
-    grade,
+    grade: score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 65 ? 'B' : 'C',
     co2SavedKg: Number(
       (packaging.co2SavingsKg + delivery.co2OffsetKg).toFixed(2),
     ),
@@ -114,7 +164,6 @@ function impact(
     estimated: true,
   };
 }
-
 function select<T extends { id: string }>(
   options: T[],
   id: string | undefined,

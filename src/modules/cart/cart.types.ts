@@ -42,6 +42,7 @@ export interface CartItem {
   productId: string;
   slug: string;
   name: string;
+  category: string;
   image: CartImage | null;
   priceCents: number;
   currency: string;
@@ -58,12 +59,15 @@ export interface CartItem {
 export interface CartCustomization {
   id: string;
   previewPath: string;
+  text: string | null;
 }
 
 export interface Cart {
   items: CartItem[];
   totalQuantity: number;
   subtotalCents: number;
+  personalizationCents: number;
+  totalCents: number;
   currency: string | null;
   readyForCheckout: boolean;
   updatedAt: string | null;

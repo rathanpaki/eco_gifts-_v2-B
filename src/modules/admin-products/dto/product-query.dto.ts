@@ -30,6 +30,13 @@ export class ProductQueryDto {
   @Transform(({ value }) => Number(value))
   @IsInt()
   @Min(1)
+  @Max(10_000)
+  page = 1;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
   @Max(50)
   limit = 20;
 }

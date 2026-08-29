@@ -111,10 +111,24 @@ export class AdminOrdersRepository {
       const products = productRefs.length
         ? await transaction.getAll(...productRefs)
         : [];
-      if (quantities) restoreOrderInventory(transaction, products, quantities);
       const now = Timestamp.now();
+      if (quantities) {
+        restoreOrderInventory(transaction, products, quantities, {
+          orderId,
+          actorId: actor.uid,
+          actorEmail: actor.email,
+          createdAt: now,
+        });
+      }
       transaction.update(orderRef, {
         fulfillmentStatus: target,
+        ...(target === 'delivered'
+          ? {
+              deliveredAt: now,
+              deliveryConfirmationStatus: 'awaiting_customer',
+              deliveryConfirmedAt: null,
+            }
+          : {}),
         ...(target === 'delivered' && data.paymentMethod === 'pay_on_delivery'
           ? { paymentStatus: 'paid' }
           : {}),

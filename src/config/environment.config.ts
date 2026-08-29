@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { existsSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { CookieOptions } from 'express';
 
 export type SameSite = 'lax' | 'strict' | 'none';
@@ -46,13 +47,16 @@ export class EnvironmentConfig {
 
   assertFirebaseCredentials(): void {
     if (this.firebaseServiceAccount) return;
-    const credentialPath = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
-    if (credentialPath) {
+    const rawCredentialPath =
+      process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+    if (rawCredentialPath) {
+      const credentialPath = resolve(process.cwd(), rawCredentialPath);
       if (!existsSync(credentialPath) || !statSync(credentialPath).isFile()) {
         throw new Error(
           `GOOGLE_APPLICATION_CREDENTIALS must reference an existing JSON file. Not found: ${credentialPath}`,
         );
       }
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
       return;
     }
     throw new Error(

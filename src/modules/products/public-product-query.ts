@@ -19,10 +19,22 @@ export function normalizeProductQuery(
   }
   const hasPriceBounds =
     query.minPriceCents !== undefined || query.maxPriceCents !== undefined;
+  if (
+    query.occasion &&
+    (query.search ||
+      query.category ||
+      query.personalizable !== undefined ||
+      hasPriceBounds)
+  ) {
+    throw new BadRequestException(
+      'Occasion collections cannot be combined with catalog filters.',
+    );
+  }
   const sort = resolveSort(query.sort, hasPriceBounds);
   const hasFilters = Boolean(
     query.search ||
     query.category ||
+    query.occasion ||
     query.personalizable !== undefined ||
     hasPriceBounds,
   );
@@ -34,11 +46,13 @@ export function normalizeProductQuery(
   return {
     searchTokens: searchTokens(query.search),
     category: query.category?.trim(),
+    occasion: query.occasion,
     minPriceCents: query.minPriceCents,
     maxPriceCents: query.maxPriceCents,
     personalizable: query.personalizable,
     sort,
     cursor: query.cursor,
+    page: query.page ?? 1,
     limit: query.limit,
   };
 }

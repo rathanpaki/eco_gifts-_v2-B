@@ -46,11 +46,10 @@ export class AuthController {
       body.idToken,
       body.marketingOptIn,
     );
-    response.cookie(
-      this.config.sessionCookieName,
-      result.sessionCookie,
-      this.config.sessionCookieOptions(),
-    );
+    response.cookie(this.config.sessionCookieName, result.sessionCookie, {
+      ...this.config.sessionCookieOptions(),
+      maxAge: result.expiresIn,
+    });
     return { user: result.user };
   }
 
@@ -75,6 +74,7 @@ export class AuthController {
       user: {
         uid: user.uid,
         email: user.email,
+        displayName: user.displayName,
         emailVerified: user.emailVerified,
         role: user.role,
       },
@@ -85,6 +85,7 @@ export class AuthController {
 interface SessionUser {
   uid: string;
   email: string | null;
+  displayName: string | null;
   emailVerified: boolean;
   role: AuthenticatedUser['role'];
 }

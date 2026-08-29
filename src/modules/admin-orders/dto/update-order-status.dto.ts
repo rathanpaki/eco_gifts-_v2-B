@@ -28,6 +28,6 @@ export class UpdateOrderStatusDto {
   @Transform(trimmed)
   @IsString()
   @MaxLength(300)
-  @Matches(/^[^\u0000-\u001F\u007F]*$/u)
+  @Matches(/^[^\p{Cc}]*$/u)
   note?: string;
 }

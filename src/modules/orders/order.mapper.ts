@@ -1,6 +1,12 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import { Timestamp, type DocumentData } from 'firebase-admin/firestore';
-import type { Order } from './order.types';
+import type { Order, PaymentMethod } from './order.types';
+import { mapDeliveryConfirmation } from './order-delivery.mapper';
+import {
+  mapOrderContribution,
+  mapOrderRewardDiscount,
+  mapOrderPromotionDiscount,
+} from './order-eco.mapper';
 
 export function mapOrder(id: string, data: DocumentData): Order {
   const items = array(data.items).map((item) => {
@@ -22,6 +28,7 @@ export function mapOrder(id: string, data: DocumentData): Order {
   const packaging = record(data.packaging);
   const delivery = record(data.delivery);
   const impact = record(data.impact);
+  const fulfillment = fulfillmentStatus(data.fulfillmentStatus);
   if (!items.length) invalid();
   return {
     id,
@@ -35,7 +42,7 @@ export function mapOrder(id: string, data: DocumentData): Order {
       ...optional('region', address.region),
       postalCode: text(address.postalCode),
       countryCode: text(address.countryCode),
-      ...optional('phone', address.phone),
+      phone: legacyPhone(address.phone),
     },
     packaging: {
       id: packagingId(packaging.id),
@@ -63,12 +70,17 @@ export function mapOrder(id: string, data: DocumentData): Order {
       methodologyVersion: text(impact.methodologyVersion),
       estimated: true,
     },
+    ecoContribution: mapOrderContribution(data.ecoContribution),
+    rewardDiscount: mapOrderRewardDiscount(data.rewardDiscount),
+    promotionDiscount: mapOrderPromotionDiscount(data.promotionDiscount),
     subtotalCents: integer(data.subtotalCents),
+    personalizationCents: optionalInteger(data.personalizationCents),
     totalCents: integer(data.totalCents),
     currency: text(data.currency),
-    paymentMethod: exact(data.paymentMethod, 'pay_on_delivery'),
+    paymentMethod: paymentMethod(data.paymentMethod),
     paymentStatus: paymentStatus(data.paymentStatus),
-    fulfillmentStatus: fulfillmentStatus(data.fulfillmentStatus),
+    fulfillmentStatus: fulfillment,
+    ...mapDeliveryConfirmation(data, fulfillment),
     history: [],
     createdAt: timestamp(data.createdAt),
   };
@@ -87,6 +99,9 @@ function integer(value: unknown): number {
   return Number.isSafeInteger(value) && (value as number) >= 0
     ? (value as number)
     : invalid();
+}
+function optionalInteger(value: unknown): number {
+  return value === undefined ? 0 : integer(value);
 }
 function positiveInteger(value: unknown): number {
   const parsed = integer(value);
@@ -107,20 +122,33 @@ function image(value: unknown): { url: string; alt: string } | null {
 }
 function customization(
   value: unknown,
-): { id: string; previewPath: string } | null {
-  if (value === null) return null;
+): { id: string; previewPath: string; text: string | null } | null {
+  if (value === undefined || value === null) return null;
   const data = record(value);
   const previewPath = text(data.previewPath);
   if (!/^\/api\/customizations\/[A-Za-z0-9_-]+\/preview$/.test(previewPath)) {
     return invalid();
   }
-  return { id: text(data.id), previewPath };
+  return {
+    id: text(data.id),
+    previewPath,
+    text:
+      typeof data.text === 'string' && data.text.trim()
+        ? data.text.trim().slice(0, 120)
+        : null,
+  };
+}
+function legacyPhone(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  return text(value);
 }
 function timestamp(value: unknown): string {
   return value instanceof Timestamp ? value.toDate().toISOString() : invalid();
 }
-function exact<T extends string>(value: unknown, expected: T): T {
-  return value === expected ? expected : invalid();
+function paymentMethod(value: unknown): PaymentMethod {
+  return value === 'pay_on_delivery' || value === 'demo_card'
+    ? value
+    : invalid();
 }
 function paymentStatus(value: unknown) {
   if (
@@ -154,7 +182,9 @@ function packagingId(value: unknown) {
   return invalid();
 }
 function deliveryId(value: unknown) {
-  return value === 'standard' || value === 'green-logistics'
+  return value === 'standard' ||
+    value === 'express' ||
+    value === 'green-logistics'
     ? value
     : invalid();
 }

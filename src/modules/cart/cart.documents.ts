@@ -124,7 +124,9 @@ export function validatedCustomization(
   customizationId: string | undefined,
 ): CartCustomization | null {
   if (!customizationId) return null;
-  const data = snapshot?.data();
+  const stored: unknown = snapshot?.data();
+  const data = unknownRecord(stored);
+  const previewPath = data?.previewPath;
   if (
     identity.ownerType !== 'user' ||
     !snapshot?.exists ||
@@ -132,13 +134,25 @@ export function validatedCustomization(
     data.userId !== identity.ownerId ||
     data.productId !== productId ||
     data.status !== 'active' ||
-    typeof data.previewPath !== 'string'
+    typeof previewPath !== 'string'
   ) {
     throw new BadRequestException('The customization is not available.');
   }
-  return { id: customizationId, previewPath: data.previewPath };
+  const design = unknownRecord(data.design);
+  const firstLayer = Array.isArray(design?.textLayers)
+    ? unknownRecord(design.textLayers[0])
+    : null;
+  const text = firstLayer?.text;
+  const customizationText =
+    typeof text === 'string' && text.trim() ? text.trim().slice(0, 120) : null;
+  return { id: customizationId, previewPath, text: customizationText };
 }
 
+function unknownRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
 export function isCartExpired(data: DocumentData | undefined): boolean {
   return (
     data?.expiresAt instanceof Timestamp &&

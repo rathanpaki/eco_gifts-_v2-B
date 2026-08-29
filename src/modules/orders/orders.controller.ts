@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../auth/current-user.decorator';
+import { CsrfGuard } from '../../auth/guards/csrf.guard';
 import { SessionAuthGuard } from '../../auth/guards/session-auth.guard';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { OrderParamsDto } from './dto/order-params.dto';
@@ -18,6 +19,15 @@ export class OrdersController {
     @Query() query: OrderListQueryDto,
   ): Promise<OrderHistoryPage> {
     return this.orders.list(user.uid, query);
+  }
+
+  @Post(':orderId/delivery-confirmation')
+  @UseGuards(CsrfGuard)
+  confirmDelivery(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: OrderParamsDto,
+  ): Promise<Order> {
+    return this.orders.confirmDelivery(user, params.orderId);
   }
 
   @Get(':orderId')

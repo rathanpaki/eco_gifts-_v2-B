@@ -2,7 +2,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { FirebaseAdminService } from '../../auth/firebase-admin.service';
 import type { UploadedCustomizationPreview } from './customization.types';
 
-const MAX_BYTES = 4 * 1024 * 1024;
+export const CUSTOMIZATION_PREVIEW_MAX_MB = 5;
+export const CUSTOMIZATION_PREVIEW_MAX_BYTES =
+  CUSTOMIZATION_PREVIEW_MAX_MB * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const PATH_PATTERN =
   /^customizations\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,128}\/preview\.png$/;
@@ -50,9 +52,13 @@ export class CustomizationStorageService {
   private validate(
     file: UploadedCustomizationPreview | undefined,
   ): asserts file is UploadedCustomizationPreview {
-    if (!file || file.size < 100 || file.size > MAX_BYTES) {
+    if (
+      !file ||
+      file.size < 100 ||
+      file.size > CUSTOMIZATION_PREVIEW_MAX_BYTES
+    ) {
       throw new BadRequestException(
-        'Customization previews must be PNG files no larger than 4 MB.',
+        `Customization previews must be PNG files no larger than ${CUSTOMIZATION_PREVIEW_MAX_MB} MB.`,
       );
     }
     if (

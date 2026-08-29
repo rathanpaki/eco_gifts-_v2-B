@@ -25,7 +25,10 @@ import { ProductImageDto } from './dto/product-image.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { ReorderImagesDto } from './dto/reorder-images.dto';
 import { WriteProductDto } from './dto/write-product.dto';
-import type { UploadedProductImage } from './product-image.service';
+import {
+  PRODUCT_IMAGE_MAX_BYTES,
+  type UploadedProductImage,
+} from './product-image.service';
 
 @Controller('admin/products')
 @UseGuards(SessionAuthGuard, AdminGuard)
@@ -38,6 +41,11 @@ export class AdminProductsController {
   @Get()
   list(@Query() query: ProductQueryDto): Promise<AdminProductPage> {
     return this.products.list(query);
+  }
+
+  @Get('categories')
+  categories(): Promise<string[]> {
+    return this.products.categories();
   }
 
   @Get(':id')
@@ -68,7 +76,7 @@ export class AdminProductsController {
   @UseGuards(CsrfGuard)
   @UseInterceptors(
     FileInterceptor('image', {
-      limits: { files: 1, fileSize: 5 * 1024 * 1024 },
+      limits: { files: 1, fileSize: PRODUCT_IMAGE_MAX_BYTES },
     }),
   )
   addImage(

@@ -7,7 +7,6 @@ export interface CustomizationTextLayer {
   color: string;
   rotation: number;
 }
-
 export interface CustomizationImageLayer {
   x: number;
   y: number;
@@ -16,14 +15,12 @@ export interface CustomizationImageLayer {
   scale: number;
   rotation: number;
 }
-
 export interface CustomizationDesign {
   canvasWidth: 400;
   canvasHeight: 300;
   textLayers: CustomizationTextLayer[];
-  imageLayer: CustomizationImageLayer | null;
+  imageLayers: CustomizationImageLayer[];
 }
-
 export interface Customization {
   id: string;
   productId: string;
@@ -31,7 +28,6 @@ export interface Customization {
   design: CustomizationDesign;
   createdAt: string;
 }
-
 export interface UploadedCustomizationPreview {
   buffer: Buffer;
   mimetype: string;

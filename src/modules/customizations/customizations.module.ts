@@ -13,5 +13,6 @@ import { CustomizationsService } from './customizations.service';
     CustomizationStorageService,
     CustomizationsService,
   ],
+  exports: [CustomizationsService],
 })
 export class CustomizationsModule {}

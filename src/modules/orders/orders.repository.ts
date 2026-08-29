@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { FieldPath, type Query } from 'firebase-admin/firestore';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { FieldPath, Timestamp, type Query } from 'firebase-admin/firestore';
+import type { AuthenticatedUser } from '../../auth/auth.types';
+import { deliveryConfirmationDecision } from './delivery-confirmation.values';
+import { orderEventValues } from './order-event.values';
 import { FirebaseAdminService } from '../../auth/firebase-admin.service';
 import { decodeOrderCursor, encodeOrderCursor } from './order.cursor';
 import type { OrderDocumentPage } from './order.types';
@@ -25,6 +28,40 @@ export class OrdersRepository {
       id: document.id,
       data: document.data(),
     }));
+  }
+
+  async confirmDelivery(
+    orderId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const orderRef = this.orders().doc(orderId);
+    const eventRef = orderRef.collection('events').doc();
+    await this.firebase.firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(orderRef);
+      if (!snapshot.exists) throw new NotFoundException('Order not found.');
+      const data = snapshot.data() ?? {};
+      if (!deliveryConfirmationDecision(data, user.uid)) return;
+      const now = Timestamp.now();
+      transaction.update(orderRef, {
+        deliveryConfirmationStatus: 'confirmed',
+        deliveryConfirmedAt: now,
+        updatedAt: now,
+      });
+      transaction.create(
+        eventRef,
+        orderEventValues(
+          {
+            fromStatus: 'delivered',
+            toStatus: 'delivered',
+            note: 'Delivery confirmed by customer.',
+            actorId: user.uid,
+            actorEmail: user.email,
+            actorType: 'user',
+          },
+          now,
+        ),
+      );
+    });
   }
 
   async list(

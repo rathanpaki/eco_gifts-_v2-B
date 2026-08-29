@@ -1,8 +1,15 @@
 import type { CartItem } from '../cart/cart.types';
+import type { PaymentMethod } from '../orders/order.types';
+import type { PromotionDiscount } from '../admin-promotions/admin-promotion.types';
+import type {
+  ContributionCause,
+  ContributionSummary,
+  RewardDiscount,
+} from '../eco-contribution/contribution.types';
 
 export type PackagingOptionId =
   'recycled-box' | 'seed-paper-wrap' | 'zero-waste-cloth';
-export type DeliveryOptionId = 'standard' | 'green-logistics';
+export type DeliveryOptionId = 'standard' | 'express' | 'green-logistics';
 
 export interface PackagingOption {
   id: PackagingOptionId;
@@ -37,13 +44,21 @@ export interface PlaceOrderInput {
   idempotencyKey: string;
   packagingId: PackagingOptionId;
   deliveryId: DeliveryOptionId;
-  paymentMethod: 'pay_on_delivery';
+  paymentMethod: PaymentMethod;
   address: import('../orders/order.types').DeliveryAddress;
+  contributionCause?: ContributionCause;
+  contributionAmountCents?: number;
+  voucherId?: string;
+  promoCode?: string;
 }
 
 export interface CheckoutSelection {
   packagingId?: PackagingOptionId;
   deliveryId?: DeliveryOptionId;
+  contributionCause?: ContributionCause;
+  contributionAmountCents?: number;
+  voucherId?: string;
+  promoCode?: string;
 }
 
 export interface CheckoutQuote {
@@ -53,8 +68,12 @@ export interface CheckoutQuote {
   packaging: PackagingOption;
   delivery: DeliveryOption;
   subtotalCents: number;
+  personalizationCents: number;
   totalCents: number;
   currency: string;
   impact: CheckoutImpact;
-  paymentMethod: 'pay_on_delivery';
+  ecoContribution: ContributionSummary | null;
+  rewardDiscount: RewardDiscount | null;
+  promotionDiscount: PromotionDiscount | null;
+  paymentMethod: PaymentMethod;
 }

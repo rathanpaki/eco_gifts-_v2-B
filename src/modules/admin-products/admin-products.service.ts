@@ -31,6 +31,10 @@ export class AdminProductsService {
       items: page.docs.map((doc) => mapAdminProduct(doc.id, doc.data)),
       metrics,
       nextCursor: page.nextCursor || null,
+      page: page.page,
+      pageSize: page.pageSize,
+      totalItems: page.totalItems,
+      totalPages: page.totalPages,
     };
   }
 
@@ -39,6 +43,20 @@ export class AdminProductsService {
     const product = await this.repository.get(id);
     if (!product) throw new NotFoundException('Product not found.');
     return mapAdminProduct(product.id, product.data);
+  }
+
+  async categories(): Promise<string[]> {
+    const snapshot = await this.repository.categories();
+    const values = new Map<string, string>();
+    for (const document of snapshot.docs) {
+      const category: unknown = document.get('category');
+      if (typeof category !== 'string' || !category.trim()) continue;
+      const normalized = category.trim();
+      values.set(normalized.toLowerCase(), normalized);
+    }
+    return [...values.values()].sort((left, right) =>
+      left.localeCompare(right),
+    );
   }
 
   async create(input: ProductWriteInput, actor: AuthenticatedUser) {

@@ -13,6 +13,7 @@ import {
   ProductImageService,
   type UploadedProductImage,
 } from './product-image.service';
+import { ProductStatus } from './product-status.enum';
 
 @Injectable()
 export class AdminProductImagesService {
@@ -27,19 +28,13 @@ export class AdminProductImagesService {
     alt: string,
     actor: AuthenticatedUser,
   ): Promise<AdminProduct> {
-    const product = await this.get(id);
-    if (product.images.length >= 8) {
-      throw new BadRequestException('A product can have at most 8 images.');
-    }
+    await this.get(id);
     const image = await this.storage.upload(id, file, alt);
     try {
       await this.repository.db.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(this.repository.productRef(id));
         if (!snapshot.exists) throw new NotFoundException('Product not found.');
         const current = mapAdminProduct(snapshot.id, snapshot.data()!);
-        if (current.images.length >= 8) {
-          throw new BadRequestException('A product can have at most 8 images.');
-        }
         const images = [...current.images, image];
         transaction.update(this.repository.productRef(id), {
           images,
@@ -67,6 +62,11 @@ export class AdminProductImagesService {
     const image = product.images.find((item) => item.id === imageId);
     if (!image) throw new NotFoundException('Product image not found.');
     const images = product.images.filter((item) => item.id !== imageId);
+    if (product.status === ProductStatus.ACTIVE && images.length === 0) {
+      throw new BadRequestException(
+        'Published products must keep at least one image.',
+      );
+    }
     const batch = this.repository.db.batch();
     batch.update(this.repository.productRef(id), {
       images,

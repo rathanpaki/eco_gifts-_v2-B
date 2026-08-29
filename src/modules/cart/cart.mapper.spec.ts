@@ -43,6 +43,8 @@ describe('cart mapper', () => {
 
     expect(cart.subtotalCents).toBe(5000);
     expect(cart.totalQuantity).toBe(2);
+    expect(cart.personalizationCents).toBe(0);
+    expect(cart.totalCents).toBe(5000);
     expect(cart.readyForCheckout).toBe(true);
     expect(cart.items[0]).toMatchObject({
       itemId: 'product-1',
@@ -96,6 +98,8 @@ describe('cart mapper', () => {
       },
     ]);
 
+    expect(cart.personalizationCents).toBe(600);
+    expect(cart.totalCents).toBe(3100);
     expect(cart.items[0]).toMatchObject({
       itemId: 'customization-1',
       productId: 'product-1',

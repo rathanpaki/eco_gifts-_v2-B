@@ -19,6 +19,10 @@ export class PublicProductsService {
         mapPublicProduct(document.id, document.data),
       ),
       nextCursor: page.nextCursor,
+      page: page.page,
+      pageSize: page.pageSize,
+      totalItems: page.totalItems,
+      totalPages: page.totalPages,
     };
   }
 
@@ -32,6 +36,7 @@ export class PublicProductsService {
     const page = await this.repository.list({
       searchTokens: [],
       sort: 'featured',
+      page: 1,
       limit: query.limit,
     });
     return page.docs.map((document) =>

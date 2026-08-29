@@ -1,8 +1,11 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsIn,
   IsString,
   Length,
   Matches,
@@ -11,6 +14,10 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import {
+  productOccasions,
+  type ProductOccasion,
+} from '../../products/product-occasion';
 import { ProductStatus } from '../product-status.enum';
 
 export class WriteProductDto {
@@ -33,6 +40,11 @@ export class WriteProductDto {
   @MinLength(2)
   @MaxLength(80)
   category!: string;
+
+  @IsArray()
+  @ArrayMaxSize(productOccasions.length)
+  @IsIn(productOccasions, { each: true })
+  occasions!: ProductOccasion[];
 
   @IsString()
   @Matches(/^[A-Z0-9][A-Z0-9_-]{2,63}$/)

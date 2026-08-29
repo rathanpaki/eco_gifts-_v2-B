@@ -10,9 +10,12 @@ describe('public products repository', () => {
     where: jest.fn(),
     orderBy: jest.fn(),
     startAfter: jest.fn(),
+    offset: jest.fn(),
     limit: jest.fn(),
+    count: jest.fn(),
     get: jest.fn(),
   };
+  const countGet = jest.fn();
   const collection = jest.fn();
   const firebase = {
     firestore: { collection },
@@ -24,7 +27,10 @@ describe('public products repository', () => {
     query.where.mockReturnValue(query);
     query.orderBy.mockReturnValue(query);
     query.startAfter.mockReturnValue(query);
+    query.offset.mockReturnValue(query);
     query.limit.mockReturnValue(query);
+    query.count.mockReturnValue({ get: countGet });
+    countGet.mockResolvedValue({ data: () => ({ count: 31 }) });
     query.get.mockResolvedValue({ docs: [] });
     collection.mockReturnValue(query);
   });
@@ -33,14 +39,21 @@ describe('public products repository', () => {
     await repository.list({
       searchTokens: ['soy', 'candle'],
       category: 'Home',
+      occasion: 'wedding',
       personalizable: true,
       sort: 'newest',
+      page: 1,
       limit: 20,
     });
 
     expect(collection).toHaveBeenCalledWith('products');
     expect(query.where).toHaveBeenCalledWith('status', '==', 'active');
     expect(query.where).toHaveBeenCalledWith('category', '==', 'Home');
+    expect(query.where).toHaveBeenCalledWith(
+      'occasions',
+      'array-contains',
+      'wedding',
+    );
     expect(query.where).toHaveBeenCalledWith(
       'personalizationAvailable',
       '==',
@@ -52,6 +65,23 @@ describe('public products repository', () => {
       ['soy', 'candle'],
     );
     expect(query.limit).toHaveBeenCalledWith(21);
+  });
+
+  it('uses the requested page offset and returns page metadata', async () => {
+    const page = await repository.list({
+      searchTokens: [],
+      sort: 'newest',
+      page: 2,
+      limit: 12,
+    });
+
+    expect(query.offset).toHaveBeenCalledWith(12);
+    expect(page).toMatchObject({
+      page: 2,
+      pageSize: 12,
+      totalItems: 31,
+      totalPages: 3,
+    });
   });
 
   it('always scopes slug lookup to active products', async () => {

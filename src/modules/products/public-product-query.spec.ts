@@ -8,6 +8,7 @@ describe('public product query normalization', () => {
     ).toMatchObject({
       searchTokens: ['soy', 'candle'],
       sort: 'newest',
+      page: 1,
       limit: 20,
     });
   });
@@ -60,5 +61,25 @@ describe('public product query normalization', () => {
         limit: 20,
       }),
     ).not.toThrow();
+  });
+
+  it('treats an occasion as a catalog facet', () => {
+    expect(
+      normalizeProductQuery({ occasion: 'wedding', limit: 20 }),
+    ).toMatchObject({ occasion: 'wedding', sort: 'newest' });
+    expect(() =>
+      normalizeProductQuery({
+        occasion: 'wedding',
+        sort: 'featured',
+        limit: 20,
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      normalizeProductQuery({
+        occasion: 'wedding',
+        personalizable: true,
+        limit: 20,
+      }),
+    ).toThrow(BadRequestException);
   });
 });

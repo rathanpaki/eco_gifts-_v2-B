@@ -17,8 +17,11 @@ export function recordCustomerOrder(
   snapshot: DocumentSnapshot,
   user: AuthenticatedUser,
   createdAt: Timestamp,
+  rewardPointsEarned = 0,
 ): void {
   const orderCount = storedCount(snapshot.get('orderCount')) + 1;
+  const rewardPoints =
+    storedCount(snapshot.get('rewardPoints')) + rewardPointsEarned;
   transaction.set(
     reference,
     {
@@ -32,6 +35,7 @@ export function recordCustomerOrder(
       hasOrders: true,
       repeatCustomer: orderCount >= 2,
       customerSegment: customerSegment(orderCount),
+      rewardPoints,
       lastOrderAt: createdAt,
       updatedAt: createdAt,
       ...(snapshot.exists ? {} : customerDefaults(createdAt)),
@@ -47,7 +51,6 @@ function customerDefaults(createdAt: Timestamp) {
     lifetimeValueCents: 0,
     impactPlasticAvoidedGrams: 0,
     impactCo2SavedKg: 0,
-    rewardPoints: 0,
     marketingOptIn: false,
   };
 }

@@ -54,6 +54,7 @@ export function mapCart(
       productId: item.productId,
       slug: active ? text(data.slug) || item.product.slug : item.product.slug,
       name: active ? text(data.name) || item.product.name : item.product.name,
+      category: active ? text(data.category) : '',
       image,
       priceCents,
       currency,
@@ -68,13 +69,23 @@ export function mapCart(
       customization: item.customization,
     };
   });
+  const subtotalCents = items.reduce(
+    (sum, item) => sum + item.lineTotalCents,
+    0,
+  );
+  const personalizationCents = items.reduce(
+    (sum, item) => sum + (item.customization ? 600 * item.quantity : 0),
+    0,
+  );
   const currencies = new Set(
     items.filter((item) => item.available).map((item) => item.currency),
   );
   return {
     items,
     totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotalCents: items.reduce((sum, item) => sum + item.lineTotalCents, 0),
+    subtotalCents,
+    personalizationCents,
+    totalCents: subtotalCents + personalizationCents,
     currency: currencies.size === 1 ? [...currencies][0] : null,
     readyForCheckout:
       items.length > 0 &&
@@ -98,6 +109,8 @@ export function emptyCart(): Cart {
     items: [],
     totalQuantity: 0,
     subtotalCents: 0,
+    personalizationCents: 0,
+    totalCents: 0,
     currency: null,
     readyForCheckout: false,
     updatedAt: null,
@@ -135,6 +148,13 @@ function customization(value: unknown) {
   const previewPath = text(data.previewPath);
   return id &&
     /^\/api\/customizations\/[A-Za-z0-9_-]+\/preview$/.test(previewPath)
-    ? { id, previewPath }
+    ? {
+        id,
+        previewPath,
+        text:
+          typeof data.text === 'string' && data.text.trim()
+            ? data.text.trim().slice(0, 120)
+            : null,
+      }
     : null;
 }

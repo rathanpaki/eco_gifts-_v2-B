@@ -5,6 +5,7 @@ import type {
   PublicProduct,
   PublicProductImage,
 } from './product.types';
+import { productOccasionList } from './product-occasion';
 
 export function mapPublicProduct(
   id: string,
@@ -22,6 +23,7 @@ export function mapPublicProduct(
     shortDescription: requiredText(data.shortDescription, 'short description'),
     description: requiredText(data.description, 'description'),
     category: requiredText(data.category, 'category'),
+    occasions: productOccasionList(data.occasions),
     priceCents: integer(data.priceCents, 'price'),
     currency: requiredText(data.currency, 'currency'),
     stockQuantity,
@@ -36,7 +38,6 @@ export function mapPublicProduct(
     updatedAt: date(data.updatedAt, 'updatedAt'),
   };
   if (!/^[A-Z]{3}$/.test(product.currency)) invalid(id, 'currency');
-  if (product.images.length === 0) invalid(id, 'images');
   return product;
 }
 

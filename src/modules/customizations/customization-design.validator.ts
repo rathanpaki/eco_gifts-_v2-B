@@ -11,7 +11,6 @@ const FONTS = new Set([
   'Playfair Display',
   'cursive',
 ]);
-
 export function parseCustomizationDesign(value: string): CustomizationDesign {
   let input: unknown;
   try {
@@ -20,37 +19,27 @@ export function parseCustomizationDesign(value: string): CustomizationDesign {
     throw invalid('Customization metadata must be valid JSON.');
   }
   const data = object(input);
-  if (data.canvasWidth !== 400 || data.canvasHeight !== 300) {
+  if (data.canvasWidth !== 400 || data.canvasHeight !== 300)
     throw invalid('Customization canvas dimensions are invalid.');
-  }
-  if (!Array.isArray(data.textLayers) || data.textLayers.length > 10) {
-    throw invalid('A design can contain at most 10 text layers.');
-  }
+  if (!Array.isArray(data.textLayers))
+    throw invalid('Customization text layers are invalid.');
+  if (!Array.isArray(data.imageLayers) || data.imageLayers.length > 20)
+    throw invalid('Customization image layers are invalid.');
   const textLayers = data.textLayers.map(textLayer);
-  const imageLayer =
-    data.imageLayer === null ? null : parseImageLayer(data.imageLayer);
-  if (!textLayers.length && !imageLayer) {
+  const imageLayers = data.imageLayers.map(imageLayer);
+  if (!textLayers.length && !imageLayers.length)
     throw invalid('Add text or an image before saving the customization.');
-  }
-  return {
-    canvasWidth: 400,
-    canvasHeight: 300,
-    textLayers,
-    imageLayer,
-  };
+  return { canvasWidth: 400, canvasHeight: 300, textLayers, imageLayers };
 }
-
 function textLayer(value: unknown): CustomizationTextLayer {
   const data = object(value);
   const text = string(data.text).trim();
   const fontFamily = string(data.fontFamily);
   const color = string(data.color).toUpperCase();
-  if (!text || text.length > 120) {
+  if (!text || text.length > 120)
     throw invalid('Customization text must contain 1 to 120 characters.');
-  }
-  if (!FONTS.has(fontFamily) || !/^#[0-9A-F]{6}$/.test(color)) {
+  if (!FONTS.has(fontFamily) || !/^#[0-9A-F]{6}$/.test(color))
     throw invalid('Customization typography is invalid.');
-  }
   return {
     text,
     x: coordinate(data.x, 400),
@@ -61,8 +50,7 @@ function textLayer(value: unknown): CustomizationTextLayer {
     rotation: rangedNumber(data.rotation, -180, 180),
   };
 }
-
-function parseImageLayer(value: unknown): CustomizationImageLayer {
+function imageLayer(value: unknown): CustomizationImageLayer {
   const data = object(value);
   return {
     x: coordinate(data.x, 400),
@@ -73,11 +61,9 @@ function parseImageLayer(value: unknown): CustomizationImageLayer {
     rotation: rangedNumber(data.rotation, -180, 180),
   };
 }
-
 function object(value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
     throw invalid('Customization metadata is invalid.');
-  }
   return value as Record<string, unknown>;
 }
 function string(value: unknown): string {
@@ -100,9 +86,8 @@ function rangedNumber(value: unknown, minimum: number, maximum: number) {
     !Number.isFinite(value) ||
     value < minimum ||
     value > maximum
-  ) {
+  )
     throw invalid('Customization value is outside the printable area.');
-  }
   return Number(value.toFixed(2));
 }
 function invalid(message: string): BadRequestException {

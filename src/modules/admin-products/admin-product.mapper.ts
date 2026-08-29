@@ -6,6 +6,7 @@ import type {
   ProductImage,
 } from './admin-product.types';
 import { ProductStatus } from './product-status.enum';
+import { productOccasionList } from '../products/product-occasion';
 
 export function mapAdminProduct(id: string, data: DocumentData): AdminProduct {
   const product: AdminProduct = {
@@ -15,6 +16,7 @@ export function mapAdminProduct(id: string, data: DocumentData): AdminProduct {
     shortDescription: text(data.shortDescription),
     description: text(data.description),
     category: text(data.category),
+    occasions: productOccasionList(data.occasions),
     sku: text(data.sku),
     priceCents: integer(data.priceCents),
     currency: text(data.currency),

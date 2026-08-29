@@ -19,7 +19,7 @@ describe('parseCustomizationDesign', () => {
             rotation: 0,
           },
         ],
-        imageLayer: null,
+        imageLayers: [],
       }),
     );
 
@@ -43,13 +43,13 @@ describe('parseCustomizationDesign', () => {
       canvasWidth: 800,
       canvasHeight: 600,
       textLayers: [],
-      imageLayer: null,
+      imageLayers: [],
     }),
     JSON.stringify({
       canvasWidth: 400,
       canvasHeight: 300,
       textLayers: [],
-      imageLayer: null,
+      imageLayers: [],
     }),
   ])('rejects invalid or empty designs', (input) => {
     expect(() => parseCustomizationDesign(input)).toThrow(BadRequestException);

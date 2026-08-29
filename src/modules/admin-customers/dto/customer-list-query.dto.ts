@@ -32,7 +32,7 @@ export class CustomerListQueryDto {
   @Transform(trimmed)
   @IsString()
   @MaxLength(120)
-  @Matches(/^[^\u0000-\u001F\u007F]*$/u)
+  @Matches(/^[^\p{Cc}]*$/u)
   search?: string;
 
   @IsOptional()

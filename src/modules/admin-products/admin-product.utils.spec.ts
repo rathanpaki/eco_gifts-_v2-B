@@ -12,6 +12,7 @@ const input = {
   shortDescription: 'Small batch',
   description: 'Description',
   category: 'Candles',
+  occasions: ['wedding'],
   sku: 'CANDLE-001',
   priceCents: 3400,
   currency: 'USD',

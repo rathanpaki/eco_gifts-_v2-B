@@ -7,6 +7,6 @@ export class CreateCustomizationDto {
 
   @IsString()
   @MinLength(2)
-  @MaxLength(12_000)
+  @MaxLength(50_000)
   designJson!: string;
 }

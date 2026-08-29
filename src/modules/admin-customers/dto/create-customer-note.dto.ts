@@ -8,6 +8,6 @@ export class CreateCustomerNoteDto {
   @IsString()
   @MinLength(3)
   @MaxLength(500)
-  @Matches(/^[^\u0000-\u001F\u007F]*$/u)
+  @Matches(/^[^\p{Cc}]*$/u)
   body!: string;
 }

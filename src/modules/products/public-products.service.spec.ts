@@ -22,6 +22,10 @@ describe('public products service', () => {
     repository.list.mockResolvedValue({
       docs: [{ id: 'product-1', data: publicProductFixture() }],
       nextCursor: 'next-page',
+      page: 2,
+      pageSize: 10,
+      totalItems: 11,
+      totalPages: 2,
     });
 
     const page = await service.list({ limit: 10 });
@@ -31,6 +35,12 @@ describe('public products service', () => {
     );
     expect(page.items[0].slug).toBe('artisan-candle');
     expect(page.nextCursor).toBe('next-page');
+    expect(page).toMatchObject({
+      page: 2,
+      pageSize: 10,
+      totalItems: 11,
+      totalPages: 2,
+    });
   });
 
   it('returns only the product found by the active repository lookup', async () => {

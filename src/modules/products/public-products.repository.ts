@@ -29,6 +29,9 @@ export class PublicProductsRepository {
       .collection('products')
       .where('status', '==', ProductStatus.ACTIVE);
     if (input.category) query = query.where('category', '==', input.category);
+    if (input.occasion) {
+      query = query.where('occasions', 'array-contains', input.occasion);
+    }
     if (input.personalizable !== undefined) {
       query = query.where(
         'personalizationAvailable',
@@ -52,6 +55,9 @@ export class PublicProductsRepository {
     if (input.sort === 'featured') {
       query = query.where('featuredRank', '>=', 0);
     }
+    const totalItems = (await query.count().get()).data().count;
+    const totalPages = Math.ceil(totalItems / input.limit);
+    const page = totalPages ? Math.min(input.page, totalPages) : 1;
     const order = sortOrder(input.sort);
     query = query
       .orderBy(order.field, order.direction)
@@ -60,6 +66,8 @@ export class PublicProductsRepository {
       query = query.startAfter(
         ...decodeProductCursor(input.cursor, input.sort),
       );
+    } else if (page > 1) {
+      query = query.offset((page - 1) * input.limit);
     }
     const snapshot = await query.limit(input.limit + 1).get();
     const hasMore = snapshot.docs.length > input.limit;
@@ -71,6 +79,10 @@ export class PublicProductsRepository {
         hasMore && last
           ? encodeProductCursor(last.id, last.data(), input.sort)
           : null,
+      page,
+      pageSize: input.limit,
+      totalItems,
+      totalPages,
     };
   }
 

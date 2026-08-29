@@ -1,4 +1,5 @@
 import type { ProductStatus } from './product-status.enum';
+import type { ProductOccasion } from '../products/product-occasion';
 
 export interface ProductImage {
   id: string;
@@ -20,6 +21,7 @@ export interface AdminProduct {
   shortDescription: string;
   description: string;
   category: string;
+  occasions: ProductOccasion[];
   sku: string;
   priceCents: number;
   currency: string;
@@ -48,6 +50,10 @@ export interface AdminProductPage {
   items: AdminProduct[];
   metrics: ProductMetrics;
   nextCursor: string | null;
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface ProductWriteInput {
@@ -55,6 +61,7 @@ export interface ProductWriteInput {
   shortDescription: string;
   description: string;
   category: string;
+  occasions: ProductOccasion[];
   sku: string;
   priceCents: number;
   currency: string;

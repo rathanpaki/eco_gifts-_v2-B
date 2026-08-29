@@ -1,8 +1,13 @@
+import type { PromotionDiscount } from '../admin-promotions/admin-promotion.types';
 import type {
   CheckoutImpact,
   DeliveryOption,
   PackagingOption,
 } from '../checkout/checkout.types';
+import type {
+  ContributionSummary,
+  RewardDiscount,
+} from '../eco-contribution/contribution.types';
 
 export interface DeliveryAddress {
   fullName: string;
@@ -12,7 +17,11 @@ export interface DeliveryAddress {
   region?: string;
   postalCode: string;
   countryCode: string;
-  phone?: string;
+  phone: string;
+}
+
+export interface OrderAddress extends Omit<DeliveryAddress, 'phone'> {
+  phone: string | null;
 }
 
 export interface OrderImage {
@@ -30,9 +39,14 @@ export interface OrderItem {
   quantity: number;
   lineTotalCents: number;
   ecoScore: number;
-  customization: { id: string; previewPath: string } | null;
+  customization: {
+    id: string;
+    previewPath: string;
+    text: string | null;
+  } | null;
 }
 
+export type PaymentMethod = 'pay_on_delivery' | 'demo_card';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type FulfillmentStatus =
   | 'pending'
@@ -41,6 +55,8 @@ export type FulfillmentStatus =
   | 'shipped'
   | 'delivered'
   | 'cancelled';
+export type DeliveryConfirmationStatus =
+  'not_ready' | 'awaiting_customer' | 'confirmed';
 
 export interface OrderTimelineEvent {
   id: string;
@@ -52,16 +68,22 @@ export interface Order {
   id: string;
   orderNumber: string;
   items: OrderItem[];
-  address: DeliveryAddress;
+  address: OrderAddress;
   packaging: PackagingOption;
   delivery: DeliveryOption;
   impact: CheckoutImpact;
+  ecoContribution: ContributionSummary | null;
+  rewardDiscount: RewardDiscount | null;
+  promotionDiscount: PromotionDiscount | null;
   subtotalCents: number;
+  personalizationCents: number;
   totalCents: number;
   currency: string;
-  paymentMethod: 'pay_on_delivery';
+  paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   fulfillmentStatus: FulfillmentStatus;
+  deliveryConfirmationStatus: DeliveryConfirmationStatus;
+  deliveryConfirmedAt: string | null;
   history: OrderTimelineEvent[];
   createdAt: string;
 }
@@ -75,6 +97,8 @@ export interface OrderSummary {
   currency: string;
   paymentStatus: PaymentStatus;
   fulfillmentStatus: FulfillmentStatus;
+  deliveryConfirmationStatus: DeliveryConfirmationStatus;
+  deliveryConfirmedAt: string | null;
   estimatedDelivery: string;
   impact: CheckoutImpact;
   createdAt: string;

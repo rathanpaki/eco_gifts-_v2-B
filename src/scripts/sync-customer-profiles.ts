@@ -81,8 +81,9 @@ async function loadStats(firebase: FirebaseAdminService) {
   const values = new Map<string, Stats>();
   snapshot.docs.forEach((order) => {
     const data = order.data();
-    const userId = typeof data.userId === 'string' ? data.userId : null;
-    const createdAt = data.createdAt;
+    const rawUserId: unknown = data.userId;
+    const userId = typeof rawUserId === 'string' ? rawUserId : null;
+    const createdAt: unknown = data.createdAt;
     if (!userId || !(createdAt instanceof Timestamp)) return;
     const current = values.get(userId) ?? emptyStats();
     current.orderCount += 1;
@@ -99,8 +100,11 @@ async function loadStats(firebase: FirebaseAdminService) {
 }
 
 function addPaidOrder(stats: Stats, data: FirebaseFirestore.DocumentData) {
-  const impact =
-    typeof data.impact === 'object' && data.impact ? data.impact : {};
+  const rawImpact: unknown = data.impact;
+  const impact: Record<string, unknown> =
+    typeof rawImpact === 'object' && rawImpact
+      ? (rawImpact as Record<string, unknown>)
+      : {};
   stats.completedOrderCount += 1;
   stats.lifetimeValueCents += safeNumber(data.totalCents);
   stats.impactPlasticAvoidedGrams += safeNumber(impact.plasticAvoidedGrams);

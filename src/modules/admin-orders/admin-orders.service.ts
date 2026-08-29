@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/auth.types';
+import { CustomizationsService } from '../customizations/customizations.service';
 import { mapAdminOrder, mapAdminOrderSummary } from './admin-order.mapper';
 import type {
   AdminOrder,
@@ -12,7 +13,10 @@ import type { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Injectable()
 export class AdminOrdersService {
-  constructor(private readonly repository: AdminOrdersRepository) {}
+  constructor(
+    private readonly repository: AdminOrdersRepository,
+    private readonly customizations: CustomizationsService,
+  ) {}
 
   async list(query: AdminOrderListQueryDto): Promise<AdminOrderPage> {
     const [page, counts] = await Promise.all([
@@ -56,5 +60,22 @@ export class AdminOrdersService {
       actor,
     );
     return this.get(orderId);
+  }
+
+  async personalizationPreview(
+    orderId: string,
+    customizationId: string,
+  ): Promise<Buffer> {
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(customizationId)) {
+      throw new NotFoundException('Customization not found.');
+    }
+    const order = await this.get(orderId);
+    const belongsToOrder = order.items.some(
+      (item) => item.customization?.id === customizationId,
+    );
+    if (!belongsToOrder) {
+      throw new NotFoundException('Customization not found for this order.');
+    }
+    return this.customizations.previewForAdmin(customizationId);
   }
 }

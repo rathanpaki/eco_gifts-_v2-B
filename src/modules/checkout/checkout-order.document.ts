@@ -1,7 +1,11 @@
 import { Timestamp, type DocumentData } from 'firebase-admin/firestore';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import type { CheckoutQuote } from './checkout.types';
-import type { DeliveryAddress, Order } from '../orders/order.types';
+import type {
+  DeliveryAddress,
+  Order,
+  PaymentMethod,
+} from '../orders/order.types';
 
 interface BuildOrderInput {
   id: string;
@@ -9,6 +13,7 @@ interface BuildOrderInput {
   user: AuthenticatedUser;
   address: DeliveryAddress;
   fingerprint: string;
+  paymentMethod: PaymentMethod;
   createdAt: Timestamp;
 }
 
@@ -37,12 +42,18 @@ export function buildOrder(input: BuildOrderInput): {
     packaging: input.quote.packaging,
     delivery: input.quote.delivery,
     impact: input.quote.impact,
+    ecoContribution: input.quote.ecoContribution,
+    rewardDiscount: input.quote.rewardDiscount,
+    promotionDiscount: input.quote.promotionDiscount,
     subtotalCents: input.quote.subtotalCents,
+    personalizationCents: input.quote.personalizationCents,
     totalCents: input.quote.totalCents,
     currency: input.quote.currency,
-    paymentMethod: 'pay_on_delivery',
-    paymentStatus: 'pending',
+    paymentMethod: input.paymentMethod,
+    paymentStatus: input.paymentMethod === 'demo_card' ? 'paid' : 'pending',
     fulfillmentStatus: 'pending',
+    deliveryConfirmationStatus: 'not_ready',
+    deliveryConfirmedAt: null,
     history: [],
     createdAt,
   };

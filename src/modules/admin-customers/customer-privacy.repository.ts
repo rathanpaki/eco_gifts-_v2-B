@@ -42,10 +42,7 @@ function serializableRecord(
 }
 
 function serializable(value: unknown): unknown {
-  if (value && typeof value === 'object' && 'toDate' in value) {
-    const toDate = Reflect.get(value, 'toDate');
-    if (typeof toDate === 'function') return toDate.call(value).toISOString();
-  }
+  if (isDateValue(value)) return value.toDate().toISOString();
   if (Array.isArray(value)) return value.map(serializable);
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -53,4 +50,9 @@ function serializable(value: unknown): unknown {
     );
   }
   return value;
+}
+
+function isDateValue(value: unknown): value is { toDate(): Date } {
+  if (!value || typeof value !== 'object' || !('toDate' in value)) return false;
+  return typeof value.toDate === 'function';
 }

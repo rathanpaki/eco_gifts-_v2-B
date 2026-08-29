@@ -8,6 +8,7 @@ import { EnvironmentConfig } from '../config/environment.config';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { normalizedClaims, Role, roleFromClaims } from './role.enum';
 import { customerSearchTerms } from './user-profile.values';
+import { adminSettingsFrom } from '../modules/admin-settings/admin-settings.values';
 
 @Injectable()
 export class SessionService {
@@ -26,6 +27,10 @@ export class SessionService {
     }
     const user = await this.firebase.auth.getUser(token.uid);
     const role = await this.ensureRole(user.uid, user.customClaims ?? {});
+    const expiresIn =
+      role === Role.ADMIN
+        ? await this.adminSessionTtl()
+        : this.config.sessionTtlMilliseconds;
     await this.ensureProfile({
       uid: user.uid,
       email: user.email ?? token.email ?? null,
@@ -37,18 +42,29 @@ export class SessionService {
     const sessionCookie = await this.firebase.auth.createSessionCookie(
       idToken,
       {
-        expiresIn: this.config.sessionTtlMilliseconds,
+        expiresIn,
       },
     );
     return {
       sessionCookie,
+      expiresIn,
       user: {
         uid: user.uid,
+        displayName: user.displayName ?? null,
         email: user.email ?? token.email ?? null,
         emailVerified: user.emailVerified,
         role,
       },
     };
+  }
+
+  private async adminSessionTtl(): Promise<number> {
+    const snapshot = await this.firebase.firestore
+      .collection('settings')
+      .doc('store')
+      .get();
+    const minutes = adminSettingsFrom(snapshot.data()).sessionTimeoutMinutes;
+    return Math.min(minutes * 60_000, this.config.sessionTtlMilliseconds);
   }
 
   private async ensureRole(
@@ -127,8 +143,10 @@ interface ProfileInput {
 
 export interface SessionResult {
   sessionCookie: string;
+  expiresIn: number;
   user: {
     uid: string;
+    displayName: string | null;
     email: string | null;
     emailVerified: boolean;
     role: Role;
