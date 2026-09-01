@@ -70,14 +70,25 @@ describe('AdminProductImagesService', () => {
 
   it('prevents removing the final image from a published product', async () => {
     const onlyImage = image(0);
-    const batch = jest.fn();
     const remove = jest.fn();
-    const repository = {
+    const update = jest.fn();
+    const transaction = {
       get: jest.fn().mockResolvedValue({
+        exists: true,
         id: 'product-1',
-        data: productData([onlyImage]),
+        data: () => productData([onlyImage]),
       }),
-      db: { batch },
+      update,
+      create: jest.fn(),
+    };
+    const runTransaction = jest.fn(
+      async (callback: (value: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+    );
+    const repository = {
+      productRef: jest.fn().mockReturnValue({ id: 'product-1' }),
+      auditRef: jest.fn().mockReturnValue({ id: 'audit-1' }),
+      db: { runTransaction },
     } as unknown as AdminProductsRepository;
     const storage = { remove } as unknown as ProductImageService;
     const service = new AdminProductImagesService(repository, storage);
@@ -85,8 +96,42 @@ describe('AdminProductImagesService', () => {
     await expect(
       service.remove('product-1', onlyImage.id, actor()),
     ).rejects.toThrow('Published products must keep at least one image.');
-    expect(batch).not.toHaveBeenCalled();
+    expect(runTransaction).toHaveBeenCalledTimes(1);
+    expect(update).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate ids when reordering product images', async () => {
+    const images = [image(0), image(1)];
+    const update = jest.fn();
+    const transaction = {
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        id: 'product-1',
+        data: () => productData(images),
+      }),
+      update,
+      create: jest.fn(),
+    };
+    const repository = {
+      productRef: jest.fn().mockReturnValue({ id: 'product-1' }),
+      auditRef: jest.fn().mockReturnValue({ id: 'audit-1' }),
+      db: {
+        runTransaction: jest.fn(
+          async (callback: (value: typeof transaction) => Promise<unknown>) =>
+            callback(transaction),
+        ),
+      },
+    } as unknown as AdminProductsRepository;
+    const service = new AdminProductImagesService(
+      repository,
+      {} as ProductImageService,
+    );
+
+    await expect(
+      service.reorder('product-1', [images[0].id, images[0].id], actor()),
+    ).rejects.toThrow('Image order must contain every product image once.');
+    expect(update).not.toHaveBeenCalled();
   });
 });
 

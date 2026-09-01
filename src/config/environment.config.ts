@@ -17,6 +17,7 @@ export class EnvironmentConfig {
     this.integer('SESSION_DURATION_DAYS', 5, 1, 14) * 86_400_000;
   readonly cartTtlMilliseconds =
     this.integer('CART_DURATION_DAYS', 30, 1, 90) * 86_400_000;
+  readonly demoCardPaymentsEnabled = this.demoCardPayments();
   readonly cookieSecure = this.boolean('COOKIE_SECURE', this.isProduction);
   readonly cookieSameSite = this.sameSite();
   readonly cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
@@ -133,6 +134,19 @@ export class EnvironmentConfig {
     if (raw === 'true') return true;
     if (raw === 'false') return false;
     throw new Error(`${name} must be true or false.`);
+  }
+
+  private demoCardPayments(): boolean {
+    const enabled = this.boolean(
+      'ENABLE_DEMO_CARD_PAYMENTS',
+      !this.isProduction,
+    );
+    if (enabled && this.isProduction) {
+      throw new Error(
+        'ENABLE_DEMO_CARD_PAYMENTS cannot be true in production.',
+      );
+    }
+    return enabled;
   }
 
   private sameSite(): SameSite {

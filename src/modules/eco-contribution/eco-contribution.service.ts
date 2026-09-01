@@ -3,9 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { FirebaseAdminService } from '../../auth/firebase-admin.service';
 import { mapContribution, mapTreeRecord } from './contribution.mapper';
-import { contributionDocuments } from './contribution.values';
 import type {
-  ContributionSelection,
   EcoContribution,
   EcoImpactSummary,
   RewardDiscount,
@@ -17,49 +15,9 @@ import {
   rewardVoucherDiscount,
 } from './reward-voucher.values';
 
-export type CreateContributionInput = ContributionSelection & {
-  orderId: string;
-};
-
 @Injectable()
 export class EcoContributionService {
   constructor(private readonly firebase: FirebaseAdminService) {}
-
-  async recordContribution(userId: string, input: CreateContributionInput) {
-    const createdAt = Timestamp.now();
-    const records = contributionDocuments({
-      userId,
-      orderId: input.orderId,
-      selection: input,
-      createdAt,
-    });
-    const contributionRef = this.firebase.firestore
-      .collection('ecoContributions')
-      .doc(records.contribution.id);
-    const batch = this.firebase.firestore.batch();
-    batch.create(contributionRef, records.contribution.document);
-    if (records.tree) {
-      batch.create(
-        this.firebase.firestore.collection('treeRecords').doc(records.tree.id),
-        records.tree.document,
-      );
-    }
-    batch.set(
-      this.firebase.firestore.collection('users').doc(userId),
-      {
-        rewardPoints: FieldValue.increment(
-          records.contribution.rewardPointsEarned,
-        ),
-        updatedAt: createdAt,
-      },
-      { merge: true },
-    );
-    await batch.commit();
-    return mapContribution({
-      ...records.contribution.document,
-      createdAt,
-    });
-  }
 
   async summary(userId: string): Promise<EcoImpactSummary> {
     const [rewardPoints, contributions, trees, vouchers] = await Promise.all([

@@ -12,6 +12,7 @@ import { CheckoutRepository } from './checkout.repository';
 import type { CheckoutQuote, CheckoutSelection } from './checkout.types';
 import type { PlaceOrderDto } from './dto/place-order.dto';
 import { assertStorefrontActive } from './checkout-operations.policy';
+import { assertCheckoutPaymentEnabled } from './checkout-payment.policy';
 
 @Injectable()
 export class CheckoutService {
@@ -53,10 +54,10 @@ export class CheckoutService {
     input: PlaceOrderDto,
   ): Promise<Order> {
     validateDiscountChoice(input);
-    if (input.paymentMethod === 'demo_card' && this.environment.isProduction)
-      throw new BadRequestException(
-        'Card payment is only available in development.',
-      );
+    assertCheckoutPaymentEnabled(
+      input.paymentMethod,
+      this.environment.demoCardPaymentsEnabled,
+    );
     await this.carts.get(request, response);
     return this.checkout.place(user, input);
   }

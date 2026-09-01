@@ -58,26 +58,32 @@ export class AdminProductImagesService {
     imageId: string,
     actor: AuthenticatedUser,
   ): Promise<AdminProduct> {
-    const product = await this.get(id);
-    const image = product.images.find((item) => item.id === imageId);
-    if (!image) throw new NotFoundException('Product image not found.');
-    const images = product.images.filter((item) => item.id !== imageId);
-    if (product.status === ProductStatus.ACTIVE && images.length === 0) {
-      throw new BadRequestException(
-        'Published products must keep at least one image.',
-      );
-    }
-    const batch = this.repository.db.batch();
-    batch.update(this.repository.productRef(id), {
-      images,
-      image: images[0] ?? null,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    batch.create(
-      this.repository.auditRef(),
-      productAudit('product.image.removed', actor, id),
+    const image = await this.repository.db.runTransaction(
+      async (transaction) => {
+        const productReference = this.repository.productRef(id);
+        const snapshot = await transaction.get(productReference);
+        if (!snapshot.exists) throw new NotFoundException('Product not found.');
+        const product = mapAdminProduct(snapshot.id, snapshot.data()!);
+        const selected = product.images.find((item) => item.id === imageId);
+        if (!selected) throw new NotFoundException('Product image not found.');
+        const images = product.images.filter((item) => item.id !== imageId);
+        if (product.status === ProductStatus.ACTIVE && images.length === 0) {
+          throw new BadRequestException(
+            'Published products must keep at least one image.',
+          );
+        }
+        transaction.update(productReference, {
+          images,
+          image: images[0] ?? null,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.create(
+          this.repository.auditRef(),
+          productAudit('product.image.removed', actor, id),
+        );
+        return selected;
+      },
     );
-    await batch.commit();
     await this.storage.remove(image.storagePath);
     return this.get(id);
   }
@@ -87,31 +93,36 @@ export class AdminProductImagesService {
     imageIds: string[],
     actor: AuthenticatedUser,
   ): Promise<AdminProduct> {
-    const product = await this.get(id);
-    if (
-      imageIds.length !== product.images.length ||
-      imageIds.some(
-        (imageId) => !product.images.some((image) => image.id === imageId),
-      )
-    ) {
-      throw new BadRequestException(
-        'Image order must contain every product image once.',
+    await this.repository.db.runTransaction(async (transaction) => {
+      const productReference = this.repository.productRef(id);
+      const snapshot = await transaction.get(productReference);
+      if (!snapshot.exists) throw new NotFoundException('Product not found.');
+      const product = mapAdminProduct(snapshot.id, snapshot.data()!);
+      const uniqueIds = new Set(imageIds);
+      if (
+        imageIds.length !== product.images.length ||
+        uniqueIds.size !== imageIds.length ||
+        imageIds.some(
+          (imageId) => !product.images.some((image) => image.id === imageId),
+        )
+      ) {
+        throw new BadRequestException(
+          'Image order must contain every product image once.',
+        );
+      }
+      const images = imageIds.map((imageId) =>
+        product.images.find((image) => image.id === imageId)!,
       );
-    }
-    const images = imageIds.map((imageId) =>
-      product.images.find((image) => image.id === imageId)!,
-    );
-    const batch = this.repository.db.batch();
-    batch.update(this.repository.productRef(id), {
-      images,
-      image: images[0] ?? null,
-      updatedAt: FieldValue.serverTimestamp(),
+      transaction.update(productReference, {
+        images,
+        image: images[0] ?? null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(
+        this.repository.auditRef(),
+        productAudit('product.images.reordered', actor, id),
+      );
     });
-    batch.create(
-      this.repository.auditRef(),
-      productAudit('product.images.reordered', actor, id),
-    );
-    await batch.commit();
     return this.get(id);
   }
 

@@ -8,6 +8,11 @@ Copy `.env.example` to a local `.env` file through your deployment environment (
 
 Set `FRONTEND_ORIGIN` to the exact browser origin allowed to make credentialed requests. Local development uses `http://localhost:3000`. Configure the frontend API base URL as `http://localhost:4000` (for example, `VITE_API_BASE_URL=http://localhost:4000`). Production must use HTTPS, `COOKIE_SECURE=true`, and a non-development `FRONTEND_ORIGIN`; when cross-site cookies are required, use `COOKIE_SAME_SITE=none` with HTTPS.
 
+`ENABLE_DEMO_CARD_PAYMENTS=true` enables the existing development-only card
+demonstration. The application refuses to start if that setting is enabled
+with `NODE_ENV=production`. The demo never sends a card number or security
+code to this API and is not a payment-provider integration.
+
 ## Authentication flow
 
 Email/password sign-up and sign-in happen in the client using Firebase Client Auth. Exchange a freshly obtained Firebase ID token with this API:
@@ -31,4 +36,8 @@ Legacy `CUSTOMER`, `STAFF`, and `SUPER_ADMIN` claims remain readable during migr
 npm run start:dev
 npm run build
 npm test
+npm run test:e2e
 ```
+
+`GET /api/health` is the unauthenticated process-health endpoint. Other
+Firebase-backed routes require configured Firebase Admin credentials.

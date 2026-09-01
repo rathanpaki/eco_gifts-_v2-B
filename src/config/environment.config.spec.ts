@@ -27,4 +27,14 @@ describe('EnvironmentConfig cookie policy', () => {
       'COOKIE_SAME_SITE=none requires COOKIE_SECURE=true.',
     );
   });
+
+  it('never permits demo card payments in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.FRONTEND_ORIGIN = 'https://app.example.test';
+    process.env.ENABLE_DEMO_CARD_PAYMENTS = 'true';
+
+    expect(() => new EnvironmentConfig()).toThrow(
+      'ENABLE_DEMO_CARD_PAYMENTS cannot be true in production.',
+    );
+  });
 });

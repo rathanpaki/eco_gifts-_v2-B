@@ -96,22 +96,33 @@ export class AdminProductsService {
   }
 
   async update(id: string, input: ProductWriteInput, actor: AuthenticatedUser) {
-    const existing = await this.get(id);
-    await this.assertSkuAvailable(input.sku, id);
-    assertPublishable(input, existing.images.length);
-    const inventoryChanged = existing.stockQuantity !== input.stockQuantity;
+    this.assertId(id);
+    const values = productValues(input);
     await this.repository.db.runTransaction(async (transaction) => {
-      const skuChanged = existing.sku !== input.sku;
+      const productReference = this.repository.productRef(id);
+      const snapshot = await transaction.get(productReference);
+      if (!snapshot.exists) throw new NotFoundException('Product not found.');
+      const existing = mapAdminProduct(snapshot.id, snapshot.data()!);
+      assertPublishable(input, existing.images.length);
+      const skuChanged = existing.sku !== values.sku;
       if (skuChanged) {
-        const lock = await transaction.get(this.repository.skuRef(input.sku));
-        if (lock.exists && lock.get('productId') !== id) {
+        const [nextSkuLock, currentSkuLock] = await transaction.getAll(
+          this.repository.skuRef(values.sku),
+          this.repository.skuRef(existing.sku),
+        );
+        if (nextSkuLock.exists && nextSkuLock.get('productId') !== id) {
           throw new ConflictException('SKU already exists.');
         }
-        transaction.set(this.repository.skuRef(input.sku), { productId: id });
-        transaction.delete(this.repository.skuRef(existing.sku));
+        if (currentSkuLock.exists && currentSkuLock.get('productId') !== id) {
+          throw new ConflictException(
+            'Stored SKU lock does not match product.',
+          );
+        }
+        transaction.set(this.repository.skuRef(values.sku), { productId: id });
+        if (currentSkuLock.exists) transaction.delete(currentSkuLock.ref);
       }
-      transaction.update(this.repository.productRef(id), {
-        ...productValues(input),
+      transaction.update(productReference, {
+        ...values,
         featuredRank:
           input.status === ProductStatus.ACTIVE
             ? (existing.featuredRank ?? Date.now())
@@ -120,7 +131,7 @@ export class AdminProductsService {
       });
       transaction.create(this.repository.auditRef(), {
         ...productAudit('product.updated', actor, id),
-        inventoryChanged,
+        inventoryChanged: existing.stockQuantity !== input.stockQuantity,
         previousStock: existing.stockQuantity,
         stockQuantity: input.stockQuantity,
       });
@@ -129,17 +140,20 @@ export class AdminProductsService {
   }
 
   async archive(id: string, actor: AuthenticatedUser): Promise<void> {
-    await this.get(id);
-    const batch = this.repository.db.batch();
-    batch.update(this.repository.productRef(id), {
-      status: ProductStatus.ARCHIVED,
-      updatedAt: FieldValue.serverTimestamp(),
+    this.assertId(id);
+    await this.repository.db.runTransaction(async (transaction) => {
+      const productReference = this.repository.productRef(id);
+      const product = await transaction.get(productReference);
+      if (!product.exists) throw new NotFoundException('Product not found.');
+      transaction.update(productReference, {
+        status: ProductStatus.ARCHIVED,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(
+        this.repository.auditRef(),
+        productAudit('product.archived', actor, id),
+      );
     });
-    batch.create(
-      this.repository.auditRef(),
-      productAudit('product.archived', actor, id),
-    );
-    await batch.commit();
   }
 
   private async assertSkuAvailable(sku: string, productId?: string) {
