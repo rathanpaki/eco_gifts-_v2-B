@@ -45,11 +45,16 @@ export class AuthController {
     const result = await this.sessions.create(
       body.idToken,
       body.marketingOptIn,
+      body.rememberMe,
     );
-    response.cookie(this.config.sessionCookieName, result.sessionCookie, {
-      ...this.config.sessionCookieOptions(),
-      maxAge: result.expiresIn,
-    });
+    const cookieOptions = this.config.sessionCookieOptions();
+    if (result.rememberMe) cookieOptions.maxAge = result.expiresIn;
+    else delete cookieOptions.maxAge;
+    response.cookie(
+      this.config.sessionCookieName,
+      result.sessionCookie,
+      cookieOptions,
+    );
     return { user: result.user };
   }
 

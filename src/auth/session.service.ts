@@ -20,6 +20,7 @@ export class SessionService {
   async create(
     idToken: string,
     marketingOptIn?: boolean,
+    rememberMe = false,
   ): Promise<SessionResult> {
     const token = await this.firebase.auth.verifyIdToken(idToken, true);
     if (Date.now() / 1000 - token.auth_time > 5 * 60) {
@@ -28,7 +29,7 @@ export class SessionService {
     const user = await this.firebase.auth.getUser(token.uid);
     const role = await this.ensureRole(user.uid, user.customClaims ?? {});
     const expiresIn =
-      role === Role.ADMIN
+      role === Role.ADMIN && !rememberMe
         ? await this.adminSessionTtl()
         : this.config.sessionTtlMilliseconds;
     await this.ensureProfile({
@@ -48,6 +49,7 @@ export class SessionService {
     return {
       sessionCookie,
       expiresIn,
+      rememberMe,
       user: {
         uid: user.uid,
         displayName: user.displayName ?? null,
@@ -144,6 +146,7 @@ interface ProfileInput {
 export interface SessionResult {
   sessionCookie: string;
   expiresIn: number;
+  rememberMe: boolean;
   user: {
     uid: string;
     displayName: string | null;

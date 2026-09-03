@@ -73,10 +73,7 @@ export class AdminPromotionsService {
     return mapPromotion(snapshot.id, snapshot.data() ?? {});
   }
 
-  async update(
-    id: string,
-    values: PromotionWrite,
-  ): Promise<AdminPromotion> {
+  async update(id: string, values: PromotionWrite): Promise<AdminPromotion> {
     validatePromotion(values);
     const snapshot = await this.promotions.update(id, normalize(values));
     if (!snapshot) throw new NotFoundException('Promotion not found.');

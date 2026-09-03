@@ -21,4 +21,8 @@ export class CreateSessionDto {
   @IsOptional()
   @IsBoolean()
   marketingOptIn?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }

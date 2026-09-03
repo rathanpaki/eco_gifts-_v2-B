@@ -15,9 +15,7 @@ export class ProductReviewsService {
   async list(productId: string, limit: number): Promise<ProductReviewFeed> {
     const result = await this.reviews.list(productId, limit);
     return {
-      items: result.docs.map((item) =>
-        mapProductReview(item.id, item.data()),
-      ),
+      items: result.docs.map((item) => mapProductReview(item.id, item.data())),
       averageRating: result.count
         ? Math.round((result.ratingTotal / result.count) * 10) / 10
         : 0,

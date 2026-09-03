@@ -18,10 +18,7 @@ import {
   ProductReviewQueryDto,
 } from './dto/product-review.dto';
 import { ProductReviewsService } from './product-reviews.service';
-import type {
-  ProductReview,
-  ProductReviewFeed,
-} from './product-review.types';
+import type { ProductReview, ProductReviewFeed } from './product-review.types';
 
 @Controller('product-reviews')
 export class ProductReviewsController {

@@ -1,6 +1,4 @@
-import {
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
 import { Timestamp, type DocumentData } from 'firebase-admin/firestore';
 import type { ProductReview } from './product-review.types';
 

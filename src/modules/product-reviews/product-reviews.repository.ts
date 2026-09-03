@@ -48,9 +48,7 @@ export class ProductReviewsRepository {
     const productRef = this.firebase.firestore
       .collection('products')
       .doc(input.productId);
-    const reviewRef = this.reviews().doc(
-      `${input.orderId}_${input.productId}`,
-    );
+    const reviewRef = this.reviews().doc(`${input.orderId}_${input.productId}`);
     await this.firebase.firestore.runTransaction(async (transaction) => {
       const [order, existing] = await Promise.all([
         transaction.get(orderRef),
@@ -101,7 +99,10 @@ function numeric(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-function displayName(user: AuthenticatedUser, order: FirebaseFirestore.DocumentData) {
+function displayName(
+  user: AuthenticatedUser,
+  order: FirebaseFirestore.DocumentData,
+) {
   if (user.displayName?.trim()) return user.displayName.trim();
   const fullName = order.address?.fullName;
   if (typeof fullName === 'string' && fullName.trim()) {
